@@ -1,0 +1,32 @@
+# Sistema e Google Drive
+desktop.ini
+Thumbs.db
+.DS_Store
+~$*
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Banco de mídia: versiona estrutura e catálogos, nunca os arquivos de mídia
+/midia/**
+!/midia/**/
+!/midia/**/.gitkeep
+!/midia/README.md
+!/midia/catalogo.csv
+!/midia/projetos.csv
+!/midia/usos.csv
+
+# Projetos: versiona fichas e textos; guias e kits (PDF, AI, fontes…) ficam só no Drive
+/projetos/*/guias/**
+/projetos/*/kit/**
+!/projetos/*/guias/**/
+!/projetos/*/kit/**/
+!/projetos/**/.gitkeep
+!/projetos/**/*.md
+
+# Entregas (PNGs finais) são mídia: ficam fora do Git, como o banco
+/projetos/*/entregas/**
+!/projetos/*/entregas/**/
+!/projetos/*/entregas/**/.gitkeep
