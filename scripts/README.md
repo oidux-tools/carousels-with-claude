@@ -1,261 +1,262 @@
 # Scripts
 
-Automações do repositório. Todas rodam a partir da raiz do repositório (a pasta que tem o `CLAUDE.md`).
+Repository automations. All of them run from the repository root (the folder that has `CLAUDE.md`).
 
-## Preparar (uma vez por computador)
+## Setup (once per computer)
 
-Precisa de Python 3.10+.
+Requires Python 3.10+.
 
 ```bash
 python -m pip install -r scripts/requirements.txt
 ```
 
-## `indexar_midia.py` — atualiza o catálogo do banco de mídia
+## `index_media.py` — updates the media bank catalog
 
-Percorre `midia/` e mantém `midia/catalogo.csv` em dia.
+Walks through `media/` and keeps `media/catalog.csv` up to date.
 
 ```bash
-python scripts/indexar_midia.py
+python scripts/index_media.py
 ```
 
-| opção       | o que faz                                                        |
+| option      | what it does                                                     |
 |-------------|------------------------------------------------------------------|
-| `--simular` | mostra o que mudaria, sem gravar nada                            |
-| `--limpar`  | tira do catálogo as linhas de arquivos que não existem mais      |
-| `--midia`   | aponta para outra pasta de banco (útil para testes)              |
+| `--dry-run` | shows what would change, without saving anything                 |
+| `--prune`   | removes from the catalog the rows of files that no longer exist  |
+| `--media`   | points to another bank folder (useful for tests)                 |
 
-**O que ele faz**
+**What it does**
 
-- Arquivo novo: cria a linha com tipo, formato, largura, altura, proporção, duração, tamanho e data de entrada.
-- Arquivo que já existe: atualiza só as colunas técnicas.
-- `projetos` vazio: sugere o projeto pelo início do nome do arquivo, se ele estiver em `projetos.csv`.
-- Nunca mexe no que foi preenchido à mão (`projetos`, `tags`, `origem` e qualquer coluna extra que você criar).
-- Arquivo apagado ou renomeado: a linha antiga **fica** no catálogo e aparece no relatório, para você levar as tags para o nome novo. Só sai com `--limpar`.
-- Ignora `_entrada/`, mas avisa quantos arquivos estão esperando triagem.
-- Lê o log `midia/usos.csv` e recalcula `usos` (quantas linhas do log) e `ultimo_uso` (data mais recente) de cada arquivo. Essas duas colunas nunca se digitam: um valor escrito à mão é substituído.
-- Se o catálogo foi salvo pelo Excel com `;`, ele lê assim mesmo e grava de volta no padrão (`,`).
+- New file: creates the row with type, format, width, height, aspect ratio, duration, size and date added.
+- File that already exists: updates only the technical columns.
+- Empty `projects`: suggests the project from the start of the file name, if it is in `projects.csv`.
+- Never touches what was filled in by hand (`projects`, `tags`, `origin` and any extra column you create).
+- File deleted or renamed: the old row **stays** in the catalog and appears in the report, so you can carry the tags over to the new name. It only leaves with `--prune`.
+- Ignores `_inbox/`, but warns how many files are waiting for triage.
+- Reads the log `media/uses.csv` and recalculates `uses` (how many log rows) and `last_used` (most recent date) for each file. These two columns are never typed: a value written by hand is replaced.
+- If the catalog was saved by Excel with `;`, it reads it anyway and writes it back in the standard (`,`).
 
-**Avisos que ele dá (não bloqueiam nada)**
+**Warnings it gives (they don't block anything)**
 
-- nome fora da convenção `<projeto>_<descricao>_<nn>.<ext>`;
-- projeto no nome ou na coluna `projetos` que não está em `projetos.csv`;
-- foto ou fundo abaixo do tamanho mínimo;
-- arquivo que não conseguiu ler;
-- linha do log de usos que aponta para um arquivo fora do catálogo, com data fora do formato `AAAA-MM-DD`, com projeto desconhecido ou que repete arquivo + peça + slide.
+- name outside the convention `<project>_<description>_<nn>.<ext>`;
+- project in the name or in the `projects` column that is not in `projects.csv`;
+- photo or background below the minimum size;
+- file it could not read;
+- usage log row that points to a file outside the catalog, with a date outside the `YYYY-MM-DD` format, with an unknown project or that repeats file + piece + slide.
 
-**Formatos que ele lê**
+**Formats it reads**
 
-| especificação      | formatos                                          |
+| specification      | formats                                           |
 |--------------------|---------------------------------------------------|
-| largura × altura   | jpg, png, webp, gif, bmp, tif, psd, svg, mp4, mov, m4v |
-| duração            | mp4, mov, m4v, m4a, wav, mp3                       |
+| width × height     | jpg, png, webp, gif, bmp, tif, psd, svg, mp4, mov, m4v |
+| duration           | mp4, mov, m4v, m4a, wav, mp3                       |
 
-Outros formatos (pdf, ai, heic…) entram no catálogo só com tipo, formato e tamanho.
+Other formats (pdf, ai, heic…) go into the catalog only with type, format and size.
 
-## `importar_decupagem.py` — traz uma decupagem para o banco
+## `import_footage_log.py` — brings a footage log into the bank
 
-A decupagem (feita fora deste repositório) entrega uma pasta por pessoa ou assunto, arquivos `Pessoa_NNN[_destaque].jpg` e um `catalogo.csv`. O importador leva isso para `midia/`.
+The footage logging (done outside this repository) delivers one folder per person or subject, files `Person_NNN[_featured].jpg` and a `catalog.csv`. The importer takes this to `media/`.
 
 ```bash
-python scripts/importar_decupagem.py "<pasta da decupagem>" --projeto marca-exemplo --simular
-python scripts/importar_decupagem.py "<pasta da decupagem>" --projeto marca-exemplo --area restrita --lote 202611_marca-exemplo_ensaio
+python scripts/import_footage_log.py "<footage log folder>" --project example-brand --dry-run
+python scripts/import_footage_log.py "<footage log folder>" --project example-brand --area restricted --batch 202611_example-brand_shoot
 ```
 
-| opção            | o que faz                                                                 |
+| option           | what it does                                                              |
 |------------------|---------------------------------------------------------------------------|
-| `--projeto`      | slug de `midia/projetos.csv` (obrigatório)                                |
-| `--area`         | `aberta` (padrão) ou `restrita`                                           |
-| `--lote`         | nome do lote, guardado na chave da área restrita                          |
-| `--sem-codigo`   | na área restrita, mantém o nome da pasta (quando as pastas não são pessoas, ex.: datas de captação) |
-| `--pastas`       | importa só algumas pastas (para testar)                                   |
-| `--origem-midia` | preenche a coluna `origem` (ex.: `decupagem:202611_ensaio`)               |
-| `--simular`      | mostra o que faria, sem copiar nem gravar                                 |
+| `--project`      | slug from `media/projects.csv` (required)                                 |
+| `--area`         | `open` (default) or `restricted`                                          |
+| `--batch`        | batch name, kept in the restricted area key                               |
+| `--no-code`      | in the restricted area, keeps the folder name (when the folders are not people, e.g.: shoot dates) |
+| `--folders`      | imports only some folders (for testing)                                   |
+| `--media-origin` | fills in the `origin` column (e.g.: `footage-log:202611_shoot`)           |
+| `--dry-run`      | shows what it would do, without copying or saving                         |
 
-**O que acontece**
+**What happens**
 
-- Foto: cópia otimizada (lado maior 2400 px, JPEG 85), só com autor e copyright nos metadados. Vídeo: cópia direta.
-- **Área aberta:** `midia/aberta/<tipo>/<projeto>_<pasta>-<NNN>.jpg` (ex.: `marca-exemplo_ensaio-003.jpg`).
-- **Área restrita:** `midia/restrita/<projeto>/<tipo>/<projeto>_<codigo>-<NNN>.jpg` (ex.: `marca-exemplo_rk7m2qx-003.jpg`). Cada pasta ganha um código aleatório e estável; a tradução vai para `midia/restrita/<projeto>/_chave.json` (fora do Git). O nome da pasta também é trocado pelo código nos textos que vão para o catálogo.
-- O número da foto é o mesmo da decupagem; o destaque vai para a coluna `destaque`, não no nome.
-- As colunas da decupagem entram no catálogo, menos `arquivo`, `pasta`, `projeto`, `numero`, `tipo` e `orientacao`. A coluna `grupo` guarda a pasta (aberta) ou o código (restrita).
-- Reimportar é seguro: o que já foi copiado fica, os códigos não mudam e as colunas da decupagem são atualizadas.
-- No fim, roda o indexador.
+- Photo: optimized copy (longer side 2400 px, JPEG 85), with only author and copyright in the metadata. Video: direct copy.
+- **Open area:** `media/open/<type>/<project>_<folder>-<NNN>.jpg` (e.g.: `example-brand_shoot-003.jpg`).
+- **Restricted area:** `media/restricted/<project>/<type>/<project>_<code>-<NNN>.jpg` (e.g.: `example-brand_rk7m2qx-003.jpg`). Each folder gets a random, stable code; the translation goes to `media/restricted/<project>/_key.json` (outside Git). The folder name is also replaced by the code in the texts that go into the catalog.
+- The photo number is the same as in the footage log; the featured mark goes to the `featured` column, not in the name.
+- The footage log columns go into the catalog, except `file`, `folder`, `project`, `number`, `type` and `orientation`. The `group` column keeps the folder (open) or the code (restricted).
+- Reimporting is safe: what was already copied stays, the codes don't change and the footage log columns are updated.
+- At the end, it runs the indexer.
 
-**Achar o original em alta:** na aberta, o grupo é a pasta; na restrita, a `_chave.json` traduz o código. O número da foto é o mesmo da decupagem.
+**Finding the high-resolution original:** in the open area, the group is the folder; in the restricted area, `_key.json` translates the code. The photo number is the same as in the footage log.
 
-## `medir_contraste.py` — mede o contraste do texto em cada foto (B3)
+## `measure_contrast.py` — measures the contrast of the text on each photo (B3)
 
-Para cada foto e cada posição do bloco de texto, calcula a razão de contraste do creme do texto (`#F0EBDC`) contra a parte mais clara do fundo atrás do bloco. Serve para **ordenar** fotos e posições na escolha das fotos (B3) e na checagem (B5). Não elimina nada.
+For each photo and each position of the text block, it calculates the contrast ratio of the cream text color (`#F0EBDC`) against the lightest part of the background behind the block. It serves to **order** photos and positions in photo selection (B3) and in the check (B5). It doesn't eliminate anything.
 
 ```bash
-python scripts/medir_contraste.py midia/aberta/foto/marca-exemplo_ensaio-003.jpg
-python scripts/medir_contraste.py "<pasta>" --formato spread
-python scripts/medir_contraste.py "<pasta>" --bloco 700x400 --json
+python scripts/measure_contrast.py media/open/photo/example-brand_shoot-003.jpg
+python scripts/measure_contrast.py "<folder>" --format spread
+python scripts/measure_contrast.py "<folder>" --block 700x400 --json
 ```
 
-| opção                | o que faz                                                                    |
+| option               | what it does                                                                 |
 |----------------------|------------------------------------------------------------------------------|
-| entradas             | uma ou mais imagens, ou pastas (lê jpg, png, webp, tif, bmp)                 |
-| `--formato`          | `slide` (1080×1350, padrão) ou `spread` (2160×1350, medido em duas metades)  |
-| `--bloco LxA`        | tamanho aproximado do bloco de texto (padrão `570x480`)                      |
-| `--json`             | saída em JSON, para outras etapas usarem                                     |
-| `--limite-movimento` | a partir de que variação o fundo conta como movimentado (padrão 40)          |
+| inputs               | one or more images, or folders (reads jpg, png, webp, tif, bmp)              |
+| `--format`           | `slide` (1080×1350, default) or `spread` (2160×1350, measured in two halves) |
+| `--block WxH`        | approximate size of the text block (default `570x480`)                       |
+| `--json`             | output in JSON, for other steps to use                                       |
+| `--motion-limit`     | from what variation the background counts as busy (default 40)               |
 
-**Cor do texto:** o padrão é o creme `#F0EBDC` (constante `CREME` no início do script), a cor de texto sobre foto da primeira marca em que o processo rodou. Troque pela cor de texto sobre foto da sua marca antes de medir.
+**Text color:** the default is the cream `#F0EBDC` (constant `CREAM` at the start of the script), the text-on-photo color of the first brand the process ran on. Replace it with your brand's text-on-photo color before measuring.
 
-**Como mede**
+**How it measures**
 
-- Recorta a foto como o slide recorta (preencher, centralizado). No spread, recorta 2160×1350 e mede cada metade.
-- Aplica a camada Contraste (`#141414` a 10% em Linear Burn), que fica ligada nos slides.
-- Em cada posição (sup-esq, sup-dir, inf-esq, inf-dir, centro), o bloco encosta na margem de 90 px. A área medida é o bloco + 40 px (20 de cada lado).
-- Compara o creme com o **95º percentil** da luminância dessa área, pela fórmula de contraste do WCAG.
-- "Variação" é o desvio-padrão do cinza na área (0–255). Acima do limite, o fundo conta como movimentado.
+- Crops the photo the way the slide crops it (fill, centered). In the spread, it crops 2160×1350 and measures each half.
+- Applies the Contrast layer (`#141414` at 10% in Linear Burn), which stays on in the slides.
+- In each position (top-left, top-right, bottom-left, bottom-right, center), the block touches the 90 px margin. The measured area is the block + 40 px (20 on each side).
+- Compares the cream with the **95th percentile** of the luminance of that area, using the WCAG contrast formula.
+- "Variation" is the standard deviation of the gray in the area (0–255). Above the limit, the background counts as busy.
 
-**Níveis** (decisões "Contraste antes de sombra" e "Regra não é filtro")
+**Levels** (decisions "Contrast before shadow" and "A rule is not a filter")
 
-| nível     | quando                                          |
+| level     | when                                            |
 |-----------|-------------------------------------------------|
-| `ok`      | ≥ 4,5:1 e fundo calmo                           |
-| `revisar` | entre 3:1 e 4,5:1, ou fundo movimentado         |
-| `abaixo`  | < 3:1 (inegociável: trocar canto, reenquadrar ou trocar a foto; Escurecer é o último recurso) |
+| `ok`      | ≥ 4.5:1 and calm background                     |
+| `review`  | between 3:1 and 4.5:1, or busy background       |
+| `below`   | < 3:1 (non-negotiable: change corner, reframe or change the photo; Darken is the last resort) |
 
-**Ordem**
+**Order**
 
-- Posições de cada foto: melhor nível primeiro, depois longe da emenda, depois maior razão. No spread, as posições do lado de dentro de cada metade levam a nota "junto da emenda".
-- Fotos: pela melhor posição. No spread, vale a pior das duas metades, porque as duas costumam ter texto.
+- Positions of each photo: best level first, then away from the seam, then higher ratio. In the spread, the positions on the inner side of each half get the note "next to the seam".
+- Photos: by the best position. In the spread, the worse of the two halves counts, because both usually have text.
 
-**O que ele não faz**
+**What it doesn't do**
 
-- **Não vê rostos nem a emenda.** Texto sobre rosto e corte seco na emenda continuam sendo checagem visual, no screenshot da mesa.
-- Não sabe o sentido da foto: o sentido vem antes do contraste no B3.
-- Não lê o enquadramento real do Figma: supõe recorte centralizado. Se a foto for reenquadrada, meça de novo o recorte.
-- O limite de "movimentado" (40) ainda não foi calibrado com fotos reais.
+- **It doesn't see faces or the seam.** Text over a face and an abrupt cut at the seam remain a visual check, in the board screenshot.
+- It doesn't know the meaning of the photo: meaning comes before contrast in B3.
+- It doesn't read the real framing in Figma: it assumes a centered crop. If the photo is reframed, measure the crop again.
+- The "busy" limit (40) has not yet been calibrated with real photos.
 
-Usa numpy se estiver instalado (resolução cheia); sem numpy, mede 1 a cada 2 pixels, com o mesmo resultado nos testes.
+Uses numpy if it is installed (full resolution); without numpy, it measures 1 in every 2 pixels, with the same result in the tests.
 
-## `medir_coerencia.py` — mede a coerência de cor da foto com o projeto (B3)
+## `measure_coherence.py` — measures the color coherence of the photo with the project (B3)
 
-Compara a cor e a luz de cada candidata com a **régua** do projeto (a assinatura de cor das fotos de referência) e diz, em palavras, onde ela se afasta. Serve para **ordenar** candidatas no critério "coerência com a direção fotográfica" do B3, principalmente as externas (Pexels, Freepik). Não elimina nada.
+Compares the color and light of each candidate with the project's **yardstick** (the color signature of the reference photos) and says, in words, where it departs from it. It serves to **order** candidates in the B3 criterion "coherence with the photo direction", mainly the external ones (Pexels, Freepik). It doesn't eliminate anything.
 
 ```bash
-python scripts/medir_coerencia.py "<pasta de prévias>" --projeto marca-exemplo
-python scripts/medir_coerencia.py foto1.jpg foto2.jpg --projeto outra-marca --json
-python scripts/medir_coerencia.py "<pasta>" --projeto marca-exemplo --referencias "<outra pasta>"
+python scripts/measure_coherence.py "<previews folder>" --project example-brand
+python scripts/measure_coherence.py photo1.jpg photo2.jpg --project other-brand --json
+python scripts/measure_coherence.py "<folder>" --project example-brand --references "<other folder>"
 ```
 
-| opção           | o que faz                                                                     |
+| option          | what it does                                                                  |
 |-----------------|-------------------------------------------------------------------------------|
-| entradas        | uma ou mais imagens, ou pastas (lê jpg, png, webp, tif, bmp); podem ser prévias no scratchpad |
-| `--projeto`     | slug do projeto (obrigatório)                                                 |
-| `--referencias` | usa estas fotos ou pastas como régua, no lugar da direção e do catálogo (testes) |
-| `--json`        | saída em JSON, para outras etapas                                             |
-| `--cache`       | pasta do cache da régua (padrão: pasta temporária do sistema, `coerencia-carrosseis`) |
-| `--sem-cache`   | recalcula a régua sem ler nem gravar cache                                    |
+| inputs          | one or more images, or folders (reads jpg, png, webp, tif, bmp); they can be previews in the scratchpad |
+| `--project`     | project slug (required)                                                       |
+| `--references`  | uses these photos or folders as the yardstick, instead of the direction and the catalog (tests) |
+| `--json`        | output in JSON, for other steps                                               |
+| `--cache`       | yardstick cache folder (default: system temporary folder, `carousel-coherence`) |
+| `--no-cache`    | recalculates the yardstick without reading or writing the cache               |
 
-**De onde vem a régua**
+**Where the yardstick comes from**
 
-1. A lista de fotos em `projetos/<slug>/direcao-fotografica.md`, se o arquivo existir. O script pega os caminhos de `midia/…` (ex.: `midia/restrita/marca-exemplo/foto/marca-exemplo_captacao-15-10-1555.jpg`) que estão numa seção cujo título tem "referência"; sem essa seção, pega todos os caminhos do arquivo. Caminho que não existe vira aviso.
-2. Senão, as fotos do projeto no catálogo com `destaque = sim` e origem real (`decupagem:…` ou `legado:…`).
+1. The list of photos in `projects/<slug>/photo-direction.md`, if the file exists. The script takes the `media/…` paths (e.g.: `media/restricted/example-brand/photo/example-brand_shoot-15-10-1555.jpg`) that are in a section whose title has "reference"; without that section, it takes all the paths in the file. A path that doesn't exist becomes a warning.
+2. Otherwise, the project's photos in the catalog with `featured = yes` and a real origin (`footage-log:…` or `legacy:…`).
 
-A régua fica em cache (leva alguns segundos para ~200 fotos num drive de rede) e é refeita sozinha se a lista ou os arquivos mudarem. Nada é gravado em `midia/`.
+The yardstick is cached (it takes a few seconds for ~200 photos on a network drive) and is rebuilt on its own if the list or the files change. Nothing is written to `media/`.
 
-**O que mede** (em miniatura de 256 px, no espaço Lab)
+**What it measures** (on a 256 px thumbnail, in Lab space)
 
-| medida      | como                                   | palavras                                   |
+| measure     | how                                    | words                                      |
 |-------------|----------------------------------------|--------------------------------------------|
-| temperatura | média de b* (+ amarelo, − azul)        | mais quente / mais fria que o projeto      |
-| saturação   | croma médio                            | saturação acima / abaixo (mais lavada)     |
-| brilho      | média de L*                            | mais clara / mais escura que o projeto     |
-| contraste   | desvio-padrão de L*                    | contraste acima / abaixo (mais chapada)    |
-| tom         | média de a* (+ rosado, − verde)        | tom puxado para o rosado / para o verde    |
-| paleta      | distribuição de matiz das áreas com cor (8 faixas: vermelho/rosa, laranja/pele, amarelo, verde, ciano, azul, roxo, magenta) | paleta diferente (com as faixas que predominam) |
+| temperature | mean of b* (+ yellow, − blue)          | warmer / cooler than the project           |
+| saturation  | mean chroma                            | saturation above / below (more washed out) |
+| brightness  | mean of L*                             | lighter / darker than the project          |
+| contrast    | standard deviation of L*               | contrast above / below (flatter)           |
+| tint        | mean of a* (+ pinkish, − green)        | tint pulled toward pinkish / toward green  |
+| palette     | hue distribution of the colored areas (8 bands: red/pink, orange/skin, yellow, green, cyan, blue, purple, magenta) | different palette (with the predominant bands) |
 
-**Como compara**
+**How it compares**
 
-- Para cada medida, a régua é a **mediana** das referências e a **variação normal** do projeto (desvio absoluto mediano × 1,4826, com um piso para um projeto muito homogêneo não exagerar diferenças pequenas).
-- O desvio da candidata é medido nessa unidade: até 1 = **dentro**, de 1 a 2 = **um pouco** fora, acima de 2 = fora. Na paleta, só conta ser mais diferente do que as próprias referências costumam ser.
-- **Distância** = média quadrática dos seis desvios (cada um limitado a 4). Até 1 = `coerente`, de 1 a 2 = `perto`, acima de 2 = `destoa`.
-- Também diz de quantas fotos do próprio projeto a candidata está mais longe ("mais longe que 41% das fotos do projeto"), para calibrar.
-- Ordem: menor distância primeiro.
+- For each measure, the yardstick is the **median** of the references and the project's **normal variation** (median absolute deviation × 1.4826, with a floor so that a very homogeneous project does not exaggerate small differences).
+- The candidate's deviation is measured in that unit: up to 1 = **inside**, from 1 to 2 = **slightly** outside, above 2 = outside. In the palette, it only counts being more different than the references themselves usually are.
+- **Distance** = root mean square of the six deviations (each one capped at 4). Up to 1 = `coherent`, from 1 to 2 = `close`, above 2 = `off`.
+- It also says how many of the project's own photos the candidate is farther from ("farther than 41% of the project's photos"), for calibration.
+- Order: smallest distance first.
 
-**Testes (no processo original)**
+**Tests (in the original process)**
 
-- Variações de uma foto real contra a régua do próprio projeto: original 0,77 · mais saturada 0,83 · pouco mais fria 1,32 · mais escura 1,63 · preto e branco 1,63 · mais fria 2,09. As palavras batem com a alteração feita.
-- Dois projetos, destaques divididos ao meio (metade vira régua, a outra metade é candidata): régua do projeto 1, mesmo projeto 0,94 × outro 1,71; régua do projeto 2, 1,00 × 1,21. Separa na média, mas há sobreposição quando os dois projetos têm luz quente e pele.
-- Sem numpy, o resultado é o mesmo.
+- Variations of a real photo against the project's own yardstick: original 0.77 · more saturated 0.83 · slightly cooler 1.32 · darker 1.63 · black and white 1.63 · cooler 2.09. The words match the change made.
+- Two projects, featured photos split in half (one half becomes the yardstick, the other half is the candidate): project 1 yardstick, same project 0.94 × other 1.71; project 2 yardstick, 1.00 × 1.21. It separates on average, but there is overlap when both projects have warm light and skin.
+- Without numpy, the result is the same.
 
-**O que ele não faz**
+**What it doesn't do**
 
-- **Não vê cenário, pessoas nem "cara de banco".** Pessoa brasileira e real, naturalidade, retoque, filtro e cena de banco continuam sendo checagem visual, contra a direção fotográfica.
-- Não sabe o sentido da foto: o sentido vem antes da coerência no B3.
-- Mede a foto inteira, não o recorte do slide. Marca-d'água da prévia (Freepik) entra na conta.
-- A régua é tão boa quanto as referências. Quando as referências misturam luzes diferentes (ex.: quarto e sala), a variação de brilho fica larga, e "mais escura" só aparece em diferenças grandes. A lista curada em `direcao-fotografica.md` deve deixar a régua mais justa.
-- As faixas (1 e 2) e os pisos ainda não foram calibrados com escolhas reais de quem revisa.
+- **It doesn't see setting, people or "stock-photo look".** Brazilian, real people, naturalness, retouching, filter and stock scene remain a visual check, against the photo direction.
+- It doesn't know the meaning of the photo: meaning comes before coherence in B3.
+- It measures the whole photo, not the slide crop. The preview's watermark (Freepik) goes into the calculation.
+- The yardstick is only as good as the references. When the references mix different lighting (e.g.: bedroom and living room), the brightness variation gets wide, and "darker" only shows up in large differences. The curated list in `photo-direction.md` should make the yardstick tighter.
+- The bands (1 and 2) and the floors have not yet been calibrated with real choices from reviewers.
 
-Usa numpy se estiver instalado; sem numpy, faz a mesma conta em Python puro (mais lento).
+Uses numpy if it is installed; without numpy, it does the same calculation in pure Python (slower).
 
-## `estruturar_pedido.py` — transforma o pedido na estrutura do carrossel (B2)
+## `structure_request.py` — turns the request into the carousel structure (B2)
 
-Lê o **pedido padrão** (`.md`, formato em `docs/fluxo-producao.md`) ou a **tarefa do Notion** (a tabela "Sequência / Texto da Arte" e as propriedades) e grava `projetos/<slug>/producao/<tema>.json`, no formato descrito abaixo (exemplo de entrada em `scripts/exemplos/`). O texto do cliente **não é reescrito**: o script só organiza, marca o destaque e resolve viúvas. O que pede decisão vira exceção com motivo.
+Reads the **standard request** (`.md`, format in `docs/production-flow.md`) or the **Notion task** (the "Sequence / Art Text" table and the properties) and writes `projects/<slug>/production/<topic>.json`, in the format described below (example input in `scripts/examples/`). The client's text **is not rewritten**: the script only organizes, marks the highlight and resolves widows. Whatever calls for a decision becomes an exception with a reason.
 
-**Pedido padrão:** é só passar o arquivo. O projeto sai do campo `projeto` (slug de `midia/projetos.csv`), e o tema, do campo `tema`.
-
-```bash
-python scripts/estruturar_pedido.py scripts/exemplos/pedido-padrao-exemplo.md --simular
-```
-
-**Tarefa do Notion · passo 1 — o Claude busca a tarefa (o script não fala com o Notion)**
-
-1. Pelo MCP do Notion, **só leitura**: `notion-fetch` com a URL ou o ID da página da tarefa (base Tasks).
-2. Salva a resposta num arquivo no scratchpad da sessão (ex.: `<scratchpad>/notion/TAREFA-101.md`). Serve qualquer um dos dois:
-   - o JSON inteiro que o `notion-fetch` devolve (com o campo `text`);
-   - só o texto da página, com os blocos `<properties>{…}</properties>` e `<content>…</content>`.
-   O arquivo é temporário: o que importa dele (URL, ID, prazos, pasta) fica em `origem` no JSON gerado.
-
-**Tarefa do Notion · passo 2 — roda o script**
+**Standard request:** just pass the file. The project comes from the `project` field (slug from `media/projects.csv`), and the topic, from the `topic` field.
 
 ```bash
-python scripts/estruturar_pedido.py "<scratchpad>/notion/TAREFA-101.md" --simular
-python scripts/estruturar_pedido.py "<scratchpad>/notion/TAREFA-101.md"
+python scripts/structure_request.py scripts/examples/standard-request-example.md --dry-run
 ```
 
-| opção            | o que faz                                                                    |
+**Notion task · step 1 — Claude fetches the task (the script doesn't talk to Notion)**
+
+1. Through the Notion MCP, **read-only**: `notion-fetch` with the URL or the ID of the task page (Tasks database).
+2. Saves the response to a file in the session scratchpad (e.g.: `<scratchpad>/notion/TASK-101.md`). Either of the two works:
+   - the whole JSON that `notion-fetch` returns (with the `text` field);
+   - only the page text, with the `<properties>{…}</properties>` and `<content>…</content>` blocks.
+   The file is temporary: what matters from it (URL, ID, deadlines, folder) stays in `origin` in the generated JSON.
+
+**Notion task · step 2 — run the script**
+
+```bash
+python scripts/structure_request.py "<scratchpad>/notion/TASK-101.md" --dry-run
+python scripts/structure_request.py "<scratchpad>/notion/TASK-101.md"
+```
+
+| option           | what it does                                                                 |
 |------------------|------------------------------------------------------------------------------|
-| `--tema`         | nome do arquivo sem `.json` (padrão: o campo `tema` do pedido padrão; senão, até 4 palavras fortes do título da capa) |
-| `--saida`        | grava em outro caminho (útil para testes)                                    |
-| `--sobrescrever` | permite substituir um JSON que já existe (sem ela, o script para)            |
-| `--simular`      | mostra o JSON e o relatório, sem gravar                                      |
+| `--topic`        | file name without `.json` (default: the `topic` field of the standard request; otherwise, up to 4 strong words from the cover title) |
+| `--output`       | writes to another path (useful for tests)                                    |
+| `--overwrite`    | allows replacing a JSON that already exists (without it, the script stops)   |
+| `--dry-run`      | shows the JSON and the report, without saving                                |
 
-**Projeto:** no pedido padrão, o slug vem do campo `projeto`. Na tarefa do Notion, sai da relação `Project`, comparada com a coluna `notion_projeto` de `midia/projetos.csv`. Sem correspondência, o script **para** e avisa.
+**Project:** in the standard request, the slug comes from the `project` field. In the Notion task, it comes from the `Project` relation, compared with the `notion_project` column of `media/projects.csv`. With no match, the script **stops** and warns.
 
-**ID do Notion:** o número da propriedade "ID" ganha o prefixo de `PREFIXO_ID` (no início do script; padrão `TAREFA`). Troque pelo prefixo da sua base.
+**Notion ID:** the number of the "ID" property gets the prefix from `ID_PREFIX` (at the start of the script; default `TASK`). Replace it with your database's prefix.
 
-**O que ele monta**
+**What it builds**
 
-- **Papel:** 1º slide com texto = capa (`Social/Capa`, modelo A; B se tiver mais de uma linha), último = final (`Social/Final`), o resto = conteúdo (`Social/Conteúdo`). Linha `+++` e slides vazios são ignorados e anotados.
-- **Título:** 1ª linha do slide. Destaque na última palavra, com `*asteriscos*` e a pontuação fora; a palavra vai também em `destaque`. Títulos não recebem U+00A0.
-- **Corpo:** linha em branco separa parágrafos; quebra simples junta as linhas. Linhas com `•`, `-`, `*` ou `1.` viram lista (`marcador` Ponto ou Número). Linha em negrito vira `negrito`, no conteúdo e no final, mesmo quando o `<b>` do Notion abre numa linha e fecha em outra; ela sai do parágrafo.
-- **Viúvas:** cada parágrafo, item, negrito e texto do final sai com as 3 últimas palavras unidas por U+00A0 (2 em textos de 4 palavras).
-- **Spread:** um, no primeiro par de slides de conteúdo cujo spread seja **diferente** do último JSON do mesmo projeto em `producao/`. A posição do texto alterna (sup-esq, inf-dir, sup-dir, inf-esq) e é **provisória**: quem decide é a foto, no B3/B5.
-- **Fotos:** `spreads[].fotos` sai vazio; o B3 preenche.
+- **Role:** 1st slide with text = cover (`Social/Cover`, variant A; B if it has more than one line), last = final (`Social/Final`), the rest = content (`Social/Content`). The `+++` row and empty slides are ignored and noted.
+- **Title:** 1st line of the slide. Highlight on the last word, with `*asterisks*` and the punctuation outside; the word also goes in `highlight`. Titles don't get U+00A0.
+- **Body:** a blank line separates paragraphs; a simple break joins the lines. Lines with `•`, `-`, `*` or `1.` become a list (`marker` Bullet or Number). A bold line becomes `bold`, in the content and in the final, even when Notion's `<b>` opens on one line and closes on another; it leaves the paragraph.
+- **Widows:** each paragraph, item, bold and final text comes out with the last 3 words joined by U+00A0 (2 in 4-word texts).
+- **Language of the carousel text:** Portuguese or English. The weak words (which are not used as highlight nor in the file name) are a Portuguese list plus the English equivalent, used together (`WEAK_WORDS_PT` and `WEAK_WORDS_EN`). The header row of the table can be "Sequence" or "Sequência". See `docs/decisions.md`, "Repository in English; carousel text in Portuguese or English".
+- **Spread:** one, in the first pair of content slides whose spread is **different** from the last JSON of the same project in `production/`. The text position alternates (top-left, bottom-right, top-right, bottom-left) and is **provisional**: the photo decides, in B3/B5.
+- **Photos:** `spreads[].photos` comes out empty; B3 fills it in.
 
-**Exceções que ele marca**
+**Exceptions it marks**
 
-| nível         | quando                                                                        |
-|---------------|-------------------------------------------------------------------------------|
-| revisar à mão | lista de 1 item (vira parágrafo); lista fora de 3 a 5 itens; mais de uma lista |
-| revisar à mão | 3 blocos de texto (o 3º vai para o negrito); mais que isso (nada é cortado)    |
-| revisar à mão | frase em negrito do cliente antes de outro texto (o componente mostra o negrito no fim) |
-| revisar à mão | slide sem título (1ª linha com mais de 80 caracteres); título com `:` no fim   |
-| revisar à mão | frase que parece incompleta ("Uma das importantes"), palavra repetida, texto com `:` no fim sem nada depois |
-| revisar à mão | texto colorido no Notion (anotação para o designer) e blocos com link: saem da arte e vão para `notas_producao` / `referencias` |
-| revisar à mão | final só com uma frase longa; final sem título (vira modelo A)                 |
-| recomendado   | título longo (capa > 54, conteúdo > 60, final > 35 caracteres); título com ponto final; destaque em palavra fraca; destaque repetido |
-| recomendado   | mais de ~45 palavras no corpo; parágrafo sem pontuação final; Asset Type diferente de "Social Media Carousel" |
+| level          | when                                                                          |
+|----------------|-------------------------------------------------------------------------------|
+| review by hand | 1-item list (becomes a paragraph); list outside 3 to 5 items; more than one list |
+| review by hand | 3 text blocks (the 3rd goes to the bold); more than that (nothing is cut)      |
+| review by hand | client's bold sentence before other text (the component shows the bold at the end) |
+| review by hand | slide without a title (1st line with more than 80 characters); title with `:` at the end |
+| review by hand | sentence that looks incomplete (Portuguese pattern: "Uma das importantes", i.e. "one of the important"), repeated word, text with `:` at the end with nothing after it |
+| review by hand | colored text in Notion (note for the designer) and blocks with a link: they leave the art and go to `production_notes` / `references` |
+| review by hand | final with only one long sentence; final without a title (becomes variant A)   |
+| recommended    | long title (cover > 54, content > 60, final > 35 characters); title with a period; highlight on a weak word; repeated highlight |
+| recommended    | more than ~45 words in the body; paragraph without final punctuation; Asset Type different from "Social Media Carousel" |
 
-**O que ele não faz**
+**What it doesn't do**
 
-- Não escolhe fotos, não mede contraste, não sabe se o tema é médico (a revisão técnica do conteúdo e as exceções de foto entram no B3–B5).
-- Não sabe que o título "cabe": as contagens de caracteres são aproximadas, sem medir a fonte.
-- A detecção de frase incompleta é uma heurística estreita (padrão "Um/Uma dos/das" sem "mais", palavra repetida). Erros de digitação passam.
-- Não altera nada no Notion.
+- It doesn't choose photos, doesn't measure contrast, doesn't know whether the topic is medical (the technical review of the content and the photo exceptions come in B3–B5).
+- It doesn't know whether the title "fits": the character counts are approximate, without measuring the font.
+- The incomplete-sentence detection is a narrow heuristic (Portuguese pattern "um dos / uma das" without "mais", i.e. "one of the" without "most"; repeated word). Typos get through.
+- It doesn't change anything in Notion.

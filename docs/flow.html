@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automation flow</title>
+<!--
+  Visual version of docs/how-it-works.md and docs/production-flow.md.
+  The texts are the source; this page only draws them.
+  Do not update on every change: changes pile up in the
+  "Pending in the visual" section of how-it-works.md and come in here in a batch (rule in CLAUDE.md).
+-->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 32px 60px;
+    background: #fff; color: #111;
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { color: #555; margin: 0 0 6px; max-width: 66ch; }
+  .updated { color: #888; font-size: 12px; margin: 0 0 20px; }
+  code { font: 12.5px ui-monospace, Consolas, monospace; background: #f1f1f1; padding: 1px 4px; border-radius: 3px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 12px; color: #555; margin-bottom: 8px; }
+  .legend i { display: inline-block; width: 22px; height: 12px; border: 1.5px solid #111; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+  .legend i.p { border-style: dashed; }
+  .legend svg { vertical-align: middle; margin-right: 6px; }
+  .hint { font-size: 13px; margin: 0 0 24px; }
+
+  .scroller { overflow-x: auto; padding-bottom: 8px; }
+  .map { position: relative; width: max-content; }
+  .map svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .wires path, .wires g { transition: opacity .15s; }
+  .wires .dimmed { opacity: .12; }
+
+  .track-title { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; margin: 0 0 10px; }
+  .track-title span { color: #777; font-weight: normal; text-transform: none; letter-spacing: 0; }
+
+  .row { display: flex; align-items: stretch; }
+  .gap { height: 170px; }
+  .step {
+    flex: 0 0 160px; text-align: left; font: inherit; color: inherit; cursor: pointer;
+    border: 1.5px solid #111; border-radius: 8px;
+    padding: 12px; background: #fff; position: relative; z-index: 1;
+  }
+  .step.person { border-style: dashed; }
+  .step:hover { background: #f4f4f4; }
+  .step:focus-visible { outline: 3px solid #111; outline-offset: 3px; }
+  .step[aria-pressed="true"] { background: #111; color: #fff; border-style: solid; }
+  .step[aria-pressed="true"] .desc, .step[aria-pressed="true"] .who { color: #ccc; }
+  .code { font-weight: 700; font-size: 13px; }
+  .name { font-weight: 600; margin: 2px 0 6px; }
+  .desc { font-size: 13px; color: #444; }
+  .who { font-size: 11px; color: #777; margin-top: 8px; text-transform: uppercase; letter-spacing: .04em; }
+  .arrow { flex: 0 0 28px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .sub { margin-top: 36px; }
+  .sub .step:not([aria-pressed="true"]) { background: #f4f4f4; }
+
+  /* detail panel */
+  .veil { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 20; }
+  .panel {
+    position: fixed; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(1240px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto;
+    background: #fff; border: 1.5px solid #111; border-radius: 10px; padding: 22px 24px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .25);
+  }
+  .panel[hidden], .veil[hidden] { display: none; }
+  body.locked { overflow: hidden; }
+  .panel-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+  .panel h2 { font-size: 20px; margin: 0; }
+  .panel h2 small { font-size: 13px; font-weight: normal; color: #777; margin-left: 8px; }
+  .close { font: inherit; font-size: 13px; background: #fff; border: 1px solid #111; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  .panel .summary { margin: 0 0 18px; max-width: 70ch; }
+  .fields { display: grid; grid-template-columns: 150px 1fr; gap: 10px 18px; margin: 0 0 18px; }
+  .fields dt { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #777; padding-top: 2px; }
+  .fields dd { margin: 0; }
+  .block { margin: 0 0 18px; }
+  .block h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #777; margin: 0 0 8px; font-weight: 600; }
+  .block ol, .block ul { margin: 0; padding-left: 20px; }
+  .block li { margin-bottom: 5px; }
+  .status { border-left: 3px solid #111; background: #f4f4f4; padding: 8px 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font: inherit; font-size: 13px; background: #fff; border: 1px solid #111; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  .chip:hover { background: #111; color: #fff; }
+  .sources a { color: #111; }
+
+  /* copy */
+  .box { position: relative; flex: 0 0 160px; display: flex; }
+  .box .step { flex: 1 1 auto; padding-right: 30px; }
+  .copy {
+    position: absolute; top: 6px; right: 6px; z-index: 2;
+    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+    background: transparent; color: #111; border: 1px solid transparent; border-radius: 5px; cursor: pointer; padding: 0;
+  }
+  .copy:hover { border-color: currentColor; }
+  .copy:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
+  .box:has(.step[aria-pressed="true"]) .copy { color: #fff; }
+  .actions { display: flex; gap: 8px; }
+  .copy-all { font: inherit; font-size: 13px; background: #fff; border: 1px solid #111; border-radius: 6px; padding: 4px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .copy-all:hover, .close:hover { background: #111; color: #fff; }
+  .notice {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 40;
+    background: #111; color: #fff; font-size: 13px; padding: 8px 14px; border-radius: 6px;
+  }
+  .notice[hidden] { display: none; }
+
+  /* mini-flow inside each step */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; row-gap: 14px; margin: 0 0 22px; }
+  .group { display: flex; align-items: stretch; }
+  .node { flex: 0 0 140px; border: 1.5px solid #111; border-radius: 6px; padding: 8px 10px; font-size: 13px; line-height: 1.35; background: #fff; }
+  .node .lbl { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #777; margin-bottom: 3px; }
+  .node.in, .node.out { background: #f1f1f1; border-radius: 16px; }
+  .node.person { border-style: dashed; }
+  .node.decision { border: 3px double #111; }
+  .node.incoming { border-style: dashed; background: #fff; flex-basis: 130px; }
+  .fl-arrow { flex: 0 0 24px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .branches { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  .branch { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .branch .when { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #555; min-width: 64px; }
+  .branch .end { border: 1.5px solid #111; border-radius: 6px; padding: 3px 8px; }
+  .flow-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: #777; margin: -10px 0 18px; }
+
+  .connections, .principles { margin-top: 36px; border-top: 1px solid #ddd; padding-top: 20px; max-width: 72ch; }
+  .connections h2, .principles h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 12px; }
+  .connections ol { list-style: none; margin: 0; padding: 0; }
+  .connections li { display: flex; gap: 10px; margin-bottom: 10px; }
+  .num { flex: 0 0 22px; height: 22px; border: 1.5px solid #111; border-radius: 50%; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .principles ul { margin: 0; padding-left: 20px; }
+  .principles li { margin-bottom: 6px; }
+  .source { margin-top: 28px; font-size: 12px; color: #888; }
+  .source a { color: #888; }
+
+  @media (max-width: 640px) {
+    body { padding: 24px 16px 40px; }
+    .fields { grid-template-columns: 1fr; gap: 2px 0; }
+    .fields dd { margin-bottom: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>How the automation works</h1>
+<p class="lead">Two tracks running together. <b>A</b> feeds <b>B</b> with photos and components; <b>B</b> returns to <b>A</b> what it learned in each delivery. That is why each delivery improves the next one.</p>
+<p class="updated">Visual updated on 2026-11-14 · source: <a href="how-it-works.md">how-it-works.md</a> and <a href="production-flow.md">production-flow.md</a></p>
+
+<div class="legend">
+  <span><i></i>Claude does it</span>
+  <span><i class="p"></i>a person is involved</span>
+  <span><svg width="34" height="10"><line x1="0" y1="5" x2="34" y2="5" stroke="#111" stroke-width="1.5"/></svg>A feeds B</span>
+  <span><svg width="34" height="10"><line x1="0" y1="5" x2="34" y2="5" stroke="#111" stroke-width="1.5" stroke-dasharray="5 4"/></svg>B returns to A</span>
+</div>
+<p class="hint"><b>Click a step</b> to see how it works inside.</p>
+
+<div class="scroller">
+<div class="map" id="map">
+  <svg class="wires" id="wires"></svg>
+
+  <div class="track-title">Track A · Groundwork <span>— continuous, does not depend on a request</span></div>
+  <div class="row">
+    <button class="step person" data-id="A1" aria-pressed="false"><div class="code">A1</div><div class="name">System and style</div><div class="desc">Brand sheet, design system, rules and learnings.</div><div class="who">You + Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step person" data-id="A2" aria-pressed="false"><div class="code">A2</div><div class="name">Footage logging</div><div class="desc">Raw material organized and cataloged. Out comes a ZIP.</div><div class="who">You + Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step" data-id="A3" aria-pressed="false"><div class="code">A3</div><div class="name">Import</div><div class="desc">ZIP goes into the media bank: open or restricted area.</div><div class="who">Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step person" data-id="A4" aria-pressed="false"><div class="code">A4</div><div class="name">Curation</div><div class="desc">Bank ready for selection: featured, contrast, history.</div><div class="who">You + Claude</div></button>
+  </div>
+
+  <div class="gap"></div>
+
+  <div class="track-title">Track B · Production <span>— runs for each request</span></div>
+  <div class="row">
+    <button class="step person" data-id="B1" aria-pressed="false"><div class="code">B1</div><div class="name">Request</div><div class="desc">From the project's source to the standard request, text already split per slide.</div><div class="who">Client or you</div></button>
+    <div class="arrow">→</div>
+    <button class="step" data-id="B2" aria-pressed="false"><div class="code">B2</div><div class="name">Structuring</div><div class="desc">Text becomes slides. Organizes, does not rewrite.</div><div class="who">Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step" data-id="B3" aria-pressed="false"><div class="code">B3</div><div class="name">Photo selection</div><div class="desc">1 main + 2 alternatives per slide. Meaning, coherence, contrast.</div><div class="who">Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step" data-id="B4" aria-pressed="false"><div class="code">B4</div><div class="name">Assembly</div><div class="desc">One “Review boards” page per project, one section per piece of content.</div><div class="who">Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step" data-id="B5" aria-pressed="false"><div class="code">B5</div><div class="name">Check</div><div class="desc">Contrast and screenshot. Exceptions with a reason.</div><div class="who">Claude</div></button>
+    <div class="arrow">→</div>
+    <button class="step person" data-id="B6" aria-pressed="false"><div class="code">B6</div><div class="name">Adjustment and approval</div><div class="desc">Review of the review board. Whoever reviews looks, doesn't read.</div><div class="who">You + client</div></button>
+    <div class="arrow">→</div>
+    <button class="step person" data-id="B7" aria-pressed="false"><div class="code">B7</div><div class="name">Delivery</div><div class="desc">PNGs in the request's delivery folder, usage logging.</div><div class="who">You + Claude</div></button>
+  </div>
+
+  <div class="row sub">
+    <div style="flex: 0 0 calc(5 * 160px + 5 * 28px)"></div>
+    <button class="step" data-id="B6.1" aria-pressed="false"><div class="code">B6.1 ↺</div><div class="name">Review cycle</div><div class="desc">Feedback becomes a written rule before redoing. Review board v2, v3…</div><div class="who">Claude</div></button>
+  </div>
+</div>
+</div>
+
+<div class="veil" id="veil" hidden></div>
+<div class="notice" id="notice" hidden role="status"></div>
+<section class="panel" id="panel" hidden role="dialog" aria-modal="true"></section>
+
+<section class="connections">
+  <h2>The connections between the tracks</h2>
+  <ol>
+    <li><span class="num">1</span><div><b>A → B3 · catalog and photos.</b> Photo selection pulls from track A the already curated bank (A4) and the usage log.</div></li>
+    <li><span class="num">2</span><div><b>A1 → B4 · design system components.</b> The review board assembly uses the <code>Social/*</code> components.</div></li>
+    <li><span class="num">3</span><div><b>B7 → A4 · uses, history and timings.</b> Each delivery logs the photos used, and the bank knows what has already gone out.</div></li>
+    <li><span class="num">4</span><div><b>B6.1 → A1 · learned criteria.</b> What was corrected in review becomes a written rule, and the next review board is born with it.</div></li>
+  </ol>
+</section>
+
+<section class="principles">
+  <h2>Principles that run through everything</h2>
+  <ul>
+    <li><b>A rule is not a filter:</b> only the non-negotiable blocks; the rest becomes an exception with a reason for a human decision.</li>
+    <li><b>Nothing goes out without a person:</b> publishing, delivering and changing Notion only with confirmation.</li>
+    <li><b>Time is measured:</b> every review board logs its milestones in <code>projects/&lt;slug&gt;/production/timings.csv</code>.</li>
+    <li><b>Feedback becomes learning:</b> it goes to <code>projects/&lt;slug&gt;/learnings.md</code> or <code>docs/carousel-learnings.md</code>.</li>
+  </ul>
+</section>
+
+<p class="source">This page draws <a href="how-it-works.md">how-it-works.md</a> and <a href="production-flow.md">production-flow.md</a>. If anything here diverges from them, the texts prevail.</p>
+
+<script>
+/* ---------- content of each step (taken from the repository documents) ----------
+   flow: nodes in order. type: in | action | person | decision | out
+   incoming: what comes in from another step (dashed line on the map)
+   branches: where the step leads at the end; "go" opens another step, "txt" is a local end */
+const STEPS = {
+  "A1": {
+    name: "System and style", who: "You + Claude",
+    summary: "Project sheet, design system, components, rules and learnings (brand-specific and general), fed by the reviews.",
+    incoming: [{ from: "B6.1", what: "criteria learned in review" }],
+    flow: [
+      { type: "in", t: "Brand guides", d: "<code>guides/</code>, as received" },
+      { type: "person", t: "Project sheet", d: "<code>project.md</code>: colors, fonts, logo, tone and the <b>Profile and image</b> block (what the photo shows and never shows), from Notion" },
+      { type: "action", t: "Photo direction", d: "<code>photo-direction.md</code>: light, color, setting, people, “stock-photo look” and the reference photos" },
+      { type: "action", t: "Kit", d: "<code>kit/</code>: official logos, fonts, templates" },
+      { type: "action", t: "Design system in Figma", d: "<code>Social/*</code> components" },
+      { type: "action", t: "Learnings", d: "brand ones in <code>learnings.md</code>; general ones in <code>docs/carousel-learnings.md</code>" },
+      { type: "out", t: "System ready", d: "for assembling the review board" }
+    ],
+    branches: [{ when: "leads to", go: "B4" }],
+    fields: {
+      "Rule": "If the sheet conflicts with the original guide, the guide wins and the sheet is corrected.",
+      "Recipe": "<code>docs/project-kit-guide.md</code>: step by step for the AI to build the kit of a new project."
+    },
+    status: "Template ready in <code>projects/_template/</code> (sheet with tone of voice and profile and image, photo direction, learnings). The design system in Figma follows the kit guide.",
+    sources: [["how-it-works.md", "how-it-works.md"], ["project-kit-guide.md", "project-kit-guide.md"], ["../projects/README.md", "projects/README.md"]]
+  },
+  "A2": {
+    name: "Footage logging", who: "You + Claude",
+    summary: "Organize and catalog the raw material. It is a separate process, which delivers a ZIP.",
+    flow: [
+      { type: "in", t: "Raw material", d: "ZIPs of photos and videos" },
+      { type: "action", t: "Extracts", d: "opens the ZIPs" },
+      { type: "action", t: "Organizes", d: "one folder per person or subject" },
+      { type: "action", t: "Classifies", d: "each photo, looking at the content" },
+      { type: "action", t: "Renames", d: "<code>Person_NNN[_featured]</code>" },
+      { type: "out", t: "ZIP + catalog", d: "folders and <code>catalog.csv</code>" }
+    ],
+    branches: [{ when: "leads to", go: "A3" }],
+    status: "Separate process. This repository only receives the result: one folder per person or subject and a <code>catalog.csv</code>.",
+    sources: [["how-it-works.md", "how-it-works.md"]]
+  },
+  "A3": {
+    name: "Import", who: "Claude",
+    summary: "Takes the footage log ZIP into the media bank and the catalog, in the open area (whole team) or restricted per project, with a code instead of the name.",
+    incoming: [{ from: "A2", what: "footage log ZIP" }],
+    flow: [
+      { type: "in", t: "Footage log folder", d: "<code>Person_NNN[_featured].jpg</code> + <code>catalog.csv</code>" },
+      { type: "decision", t: "Which area?", d: "<b>open:</b> whole team · <b>restricted:</b> only the project" },
+      { type: "action", t: "Code (restricted only)", d: "<code>r</code> + 6 characters per folder; translation in <code>_key.json</code>, outside Git" },
+      { type: "action", t: "Copies optimized", d: "longer side 2400 px, JPEG 85; video goes straight in" },
+      { type: "action", t: "Catalog", d: "footage log columns come in; featured becomes a column" },
+      { type: "action", t: "Indexer", d: "runs at the end" },
+      { type: "out", t: "In the bank", d: "<code>media/open/</code> or <code>media/restricted/&lt;project&gt;/</code>" }
+    ],
+    branches: [{ when: "leads to", go: "A4" }],
+    fields: {
+      "Tool": "<code>scripts/import_footage_log.py</code> (has <code>--dry-run</code>).",
+      "Re-import": "It is safe: what was already copied stays and the codes do not change."
+    },
+    status: "Became a script and was used with real batches in the restricted area, with a code per person or with the folder name kept (<code>--no-code</code>).",
+    sources: [["../scripts/README.md", "scripts/README.md"], ["../media/README.md", "media/README.md"]]
+  },
+  "A4": {
+    name: "Curation", who: "You + Claude",
+    summary: "Featured, contrast, history: the bank becomes ready for selection. The uses of each image come from the log media/uses.csv.",
+    incoming: [{ from: "A3", what: "new photos" }, { from: "B7", what: "uses, history and timings" }],
+    flow: [
+      { type: "in", t: "Bank + log", d: "<code>catalog.csv</code> (what the image is) and <code>uses.csv</code> (where it was used)" },
+      { type: "action", t: "Indexer", d: "maintains the catalog and recalculates <code>uses</code> and <code>last_used</code> from the log" },
+      { type: "person", t: "Completes by hand", d: "tags, origin, projects. The indexer never overwrites" },
+      { type: "person", t: "Featured and contrast", d: "what is worth choosing first" },
+      { type: "out", t: "Bank ready", d: "for photo selection" }
+    ],
+    branches: [{ when: "leads to", go: "B3" }],
+    fields: { "Rule": "<code>uses</code> and <code>last_used</code> are never typed. The log only grows." },
+    status: "The catalog is maintained by script (<code>scripts/index_media.py</code>). Featured, tags and origin are done by hand.",
+    sources: [["../media/README.md", "media/README.md"], ["../scripts/README.md", "scripts/README.md"]]
+  },
+  "B1": {
+    name: "Request", who: "Client or you",
+    summary: "The request arrives from the source configured in the project sheet (Notion, spreadsheet, document, another tool or AI text approved by you) and becomes the standard request: project, topic, delivery folder and the text per slide.",
+    flow: [
+      { type: "in", t: "Request at the source", d: "the source and the mapping are in “Requests and deliveries” in the sheet" },
+      { type: "person", t: "AI text?", d: "if the AI wrote the text from a topic, you approve it before it becomes a request" },
+      { type: "action", t: "Standard request", d: "project, topic, delivery folder and the “Sequence / Art Text” table" },
+      { type: "decision", t: "B1.1 · Does the project have a slug?", d: "slug in <code>projects.csv</code> (in Notion: <code>Project</code> relation → <code>notion_project</code> column)" }
+    ],
+    branches: [{ when: "yes", go: "B2" }, { when: "no", txt: "stops and warns" }],
+    fields: { "Example: Notion": "Task database with a ready-to-start status, <code>Project</code> relation, <code>Link Location</code> and the table in the page body. Do not filter by Asset Type.", "Format": "<code>docs/production-flow.md</code>, “Standard request”." },
+    status: "The B2 script reads the standard request and the Notion task; the slug check is already in it.",
+    sources: [["production-flow.md", "production-flow.md"]]
+  },
+  "B2": {
+    name: "Structuring", who: "Claude",
+    summary: "The text becomes the carousel structure and is distributed across slides, with at least one spread. It organizes, does not rewrite.",
+    incoming: [{ from: "B1", what: "standard request" }],
+    flow: [
+      { type: "in", t: "Standard request", d: "or the Notion task, read by Claude (read-only) and saved to a file" },
+      { type: "decision", t: "Does the project have a slug?", d: "slug of the request (or <code>Project</code> × <code>notion_project</code>) in <code>projects.csv</code>. Without a slug, the script stops" },
+      { type: "action", t: "Roles", d: "1st slide = cover, last = closing slide, the rest = content. “+++” and empty ones are dropped" },
+      { type: "action", t: "Title and body", d: "1st line = title, highlight on the last word; <code>•</code> <code>-</code> <code>1.</code> = list (a blank line in the middle does not break the list); bold becomes <code>bold</code>" },
+      { type: "action", t: "Widows", d: "last 3 words joined by U+00A0 (not in titles)" },
+      { type: "action", t: "B2.1 · Spread", d: "one, different from the project's last JSON; a slide that starts on the list becomes a spread. The text position is left for B3" },
+      { type: "decision", t: "Does something need a decision?", d: "becomes an exception: “review by hand” or “recommended”, with a reason" },
+      { type: "out", t: "Structure JSON", d: "<code>production/&lt;topic&gt;.json</code>, with the photos empty" }
+    ],
+    branches: [{ when: "leads to", go: "B3" }],
+    fields: {
+      "Tool": "<code>scripts/structure_request.py</code> (has <code>--dry-run</code>; does not overwrite without <code>--overwrite</code>) + Claude for the exceptions.",
+      "Rule": "The text belongs to the client: the script organizes, marks the highlight and resolves widows, but does not rewrite. It changes nothing at the request source.",
+      "Does not do": "Does not choose photos, does not measure contrast and does not measure whether the title fits the font (the counts are approximate)."
+    },
+    status: "Became a script (<code>scripts/structure_request.py</code>). Reads the standard request or the Notion task (fetched by Claude, through MCP).",
+    sources: [["production-flow.md", "production-flow.md"], ["../scripts/README.md", "scripts/README.md"]]
+  },
+  "B3": {
+    name: "Photo selection", who: "Claude",
+    summary: "1 main + 2 alternatives per slide or spread, ranked, with coherence and contrast measured and the reason. It also decides the text position.",
+    incoming: [{ from: "A4", what: "curated bank and usage log" }],
+    flow: [
+      { type: "in", t: "Structure + catalog", d: "and the project's learnings" },
+      { type: "action", t: "Sources, in this order", d: "client's real photos → legacy → Pexels → Freepik (Magnific). External ones only with fewer than 2 good options" },
+      { type: "action", t: "1 · Meaning", d: "follows the project's <b>Profile and image</b>; the photo tells the same stage as the text" },
+      { type: "action", t: "2 · Non-negotiables", d: "face, minimum contrast, seam" },
+      { type: "action", t: "3 · Coherence", d: "with the photo direction; color and light measured by <code>measure_coherence.py</code>, setting and people by eye" },
+      { type: "action", t: "4 · Measured contrast", d: "per corner, with <code>measure_contrast.py</code>; decides the text position" },
+      { type: "action", t: "5 · Format and uses", d: "tie-breaker: least used and not used recently in the project" },
+      { type: "decision", t: "Is there a right photo?", d: "no photo is eliminated, only ranked" }
+    ],
+    branches: [{ when: "yes", go: "B4", note: "1 main + 2 alternatives" }, { when: "no", txt: "becomes a shot-list item" }],
+    fields: {
+      "Worked if": "No slide without an option; nothing is eliminated, only ranked.",
+      "Outside photo": "Goes onto the review board as a <b>preview</b>. It is only downloaded after approval in B6 and enters <code>media/</code> with origin and license.",
+      "Learned": "Always measure: the catalog's “tone” and “free space” were wrong in 3 of 4 choices in the pilot. The measurement does not see faces."
+    },
+    status: "Tested in pilots. Contrast and color coherence are already scripts; the Freepik search runs through the Magnific connector.",
+    sources: [["how-it-works.md", "how-it-works.md"], ["production-flow.md", "production-flow.md"], ["../scripts/README.md", "scripts/README.md"]]
+  },
+  "B4": {
+    name: "Assembly", who: "Claude",
+    summary: "The review board in Figma: a single “Review boards” page per project, with one section per piece of content, in three bands aligned per slide.",
+    incoming: [{ from: "A1", what: "design system components" }],
+    flow: [
+      { type: "in", t: "Structure + photos", d: "JSON and chosen photos" },
+      { type: "action", t: "Exports the photo", d: "from the production file" },
+      { type: "action", t: "Sends to Figma", d: "to the design system file" },
+      { type: "action", t: "Applies to the slides", d: "<code>Social/*</code> instances; spread with a continuous crop" },
+      { type: "action", t: "Three bands", d: "carousel · decision strip (salmon = your decision) · photo suggestions" },
+      { type: "out", t: "Section on Review boards", d: "“topic · v1”; replaced versions stay right below" }
+    ],
+    branches: [{ when: "leads to", go: "B5" }],
+    fields: { "Worked if": "Slides in design system instances; real photos; texts from the request." },
+    status: "Components and the review board format are described. Claude assembles through the Figma connector; it still needs to become a script.",
+    sources: [["how-it-works.md", "how-it-works.md"], ["production-flow.md", "production-flow.md"]]
+  },
+  "B5": {
+    name: "Check", who: "Claude",
+    summary: "Measured contrast + screenshot (face, seam, cut-off text). Exceptions with level, reason and suggestion.",
+    flow: [
+      { type: "in", t: "Assembled review board", d: "screenshot of each slide" },
+      { type: "action", t: "Measures contrast", d: "<b>ok</b> ≥ 4.5:1 · <b>review</b> 3–4.5:1 · <b>below</b> &lt; 3:1" },
+      { type: "action", t: "Looks at the screenshot", d: "text over a face, hard cut at the seam, block height, cut-off text" },
+      { type: "decision", t: "What level?", d: "non-negotiable · review by hand · recommended" },
+      { type: "out", t: "Exceptions table", d: "per slide, with reason and suggestion, on the review board and in the JSON" }
+    ],
+    branches: [{ when: "leads to", go: "B6" }],
+    fields: { "Worked if": "No non-negotiable without action." },
+    status: "Done by Claude, with the contrast script and the screenshot of the review board.",
+    sources: [["production-flow.md", "production-flow.md"], ["../scripts/README.md", "scripts/README.md"]]
+  },
+  "B6": {
+    name: "Adjustment and approval", who: "You + client",
+    summary: "Human review of the review board. Whoever reviews looks, doesn't read: what needs a decision shows up in the image or in the strip.",
+    incoming: [{ from: "B6.1", what: "new version of the review board" }],
+    flow: [
+      { type: "in", t: "Review board + exceptions", d: "salmon strip where there is a decision" },
+      { type: "person", t: "Looks at the review board", d: "You + client. Outside the automation" },
+      { type: "decision", t: "Approved?", d: "" }
+    ],
+    branches: [{ when: "yes", go: "B7" }, { when: "feedback", go: "B6.1" }],
+    status: "Always done by a person.",
+    sources: [["how-it-works.md", "how-it-works.md"], ["production-flow.md", "production-flow.md"]]
+  },
+  "B6.1": {
+    name: "Review cycle", who: "Claude",
+    summary: "Each feedback point becomes a written criterion (brand or general) before redoing.",
+    flow: [
+      { type: "in", t: "Feedback", d: "from the review in B6" },
+      { type: "action", t: "Becomes a written criterion", d: "each point, before redoing" },
+      { type: "decision", t: "Brand or general?", d: "brand → <code>projects/&lt;slug&gt;/learnings.md</code> · general → <code>docs/carousel-learnings.md</code>" },
+      { type: "action", t: "Redoes the review board", d: "v2, v3…; the previous one stays below, marked as replaced" },
+      { type: "out", t: "New version", d: "of the review board" }
+    ],
+    branches: [{ when: "goes back to", go: "B6" }, { when: "teaches", go: "A1" }],
+    status: "Validated in a pilot.",
+    sources: [["how-it-works.md", "how-it-works.md"], ["production-flow.md", "production-flow.md"]]
+  },
+  "B7": {
+    name: "Delivery", who: "You + Claude",
+    summary: "1080 × 1440 PNGs in the request's delivery folder (default: <code>projects/&lt;slug&gt;/deliveries/&lt;topic&gt;/</code>), status at the source when there is one, and logging. Only with confirmation.",
+    incoming: [{ from: "B6", what: "approved carousel" }],
+    flow: [
+      { type: "in", t: "Approved carousel", d: "" },
+      { type: "person", t: "Confirmation", d: "nothing goes out without a person" },
+      { type: "action", t: "Exports", d: "<code>01.png</code>…<code>NN.png</code>, 1080 × 1440 (official format)" },
+      { type: "action", t: "Saves to the delivery folder", d: "the request's <code>delivery_folder</code> (in Notion, the <code>Link Location</code>). Empty folder: never overwrite" },
+      { type: "person", t: "Status at the source", d: "if the source has a status (e.g. Notion), with confirmation" },
+      { type: "action", t: "Logs", d: "one row per photo in <code>uses.csv</code> (only the used ones), indexer and <code>timings.csv</code>" },
+      { type: "action", t: "Moves the section", d: "from “Review boards” to the “Delivered” page, with the date in the title" },
+      { type: "out", t: "Piece delivered", d: "" }
+    ],
+    branches: [{ when: "returns to", go: "A4" }],
+    status: "Done by Claude, with confirmation. It still needs to become a script.",
+    sources: [["how-it-works.md", "how-it-works.md"], ["production-flow.md", "production-flow.md"], ["../media/README.md", "media/README.md"]]
+  }
+};
+
+/* ---------- panel ---------- */
+const panel = document.getElementById("panel");
+const buttons = [...document.querySelectorAll(".step")];
+const veil = document.getElementById("veil");
+veil.addEventListener("click", () => closePanel());
+
+/* ---------- copy: text ready to paste into a conversation ---------- */
+const COPY_ICON = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>`;
+const stripTags = html => { const d = document.createElement("div"); d.innerHTML = html; return d.textContent.replace(/\s+/g, " ").trim(); };
+const repoPath = href => href.startsWith("../") ? href.slice(3) : "docs/" + href;
+
+function stepText(id, full) {
+  const e = STEPS[id];
+  const track = id.startsWith("A") ? "Track A · Groundwork" : "Track B · Production";
+  const lines = [`${id} · ${e.name} (${track}) — who: ${e.who}`, stripTags(e.summary)];
+  if (full) {
+    if (e.incoming) lines.push("", "Comes from: " + e.incoming.map(c => `${c.from} (${c.what})`).join("; "));
+    lines.push("", "How it works inside:");
+    let n = 0;
+    e.flow.forEach(node => {
+      const lbl = node.type === "in" ? "In" : node.type === "out" ? "Out" :
+        `${++n}.${node.type === "person" ? " [person]" : node.type === "decision" ? " [decision]" : ""}`;
+      lines.push(`- ${lbl} ${stripTags(node.t)}${node.d ? ": " + stripTags(node.d) : ""}`);
+    });
+    if (e.branches) lines.push("Then: " + e.branches.map(r => `${r.when} → ${r.go ? r.go + " · " + STEPS[r.go].name : r.txt}`).join("; "));
+    if (e.fields) { lines.push(""); Object.entries(e.fields).forEach(([k, v]) => lines.push(`${k}: ${stripTags(v)}`)); }
+    lines.push("", "Status today: " + stripTags(e.status));
+  }
+  lines.push("", "Source: " + [`docs/flow.html#${id}`, ...e.sources.map(([h]) => repoPath(h))].join(" · "));
+  return lines.join("\n");
+}
+
+let noticeTimer;
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const t = document.createElement("textarea");
+    t.value = text; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove();
+  }
+  const a = document.getElementById("notice");
+  a.textContent = `Copied: ${label}`;
+  a.hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => a.hidden = true, 1800);
+}
+
+// each box on the map gets a copy icon (outside the button, so it does not open the panel)
+buttons.forEach(b => {
+  const id = b.dataset.id, bx = document.createElement("div");
+  bx.className = "box";
+  b.replaceWith(bx);
+  bx.appendChild(b);
+  const c = document.createElement("button");
+  c.type = "button"; c.className = "copy";
+  c.title = `Copy ${id} · ${STEPS[id].name}`;
+  c.setAttribute("aria-label", c.title);
+  c.innerHTML = COPY_ICON;
+  c.addEventListener("click", () => copy(stepText(id, false), `${id} · ${STEPS[id].name}`));
+  bx.appendChild(c);
+});
+const LABEL = { in: "in", out: "out", person: "person", decision: "decision" };
+
+function flowHTML(e) {
+  // each group = arrow + node, so the arrow is never left alone at the end of the line
+  const groups = [];
+  let n = 0;
+  e.flow.forEach((node, i) => {
+    const lbl = node.type === "action" ? `step ${++n}` : (node.type === "person" || node.type === "decision") ? `${++n} · ${LABEL[node.type]}` : LABEL[node.type];
+    let g = `<div class="node ${node.type}"><span class="lbl">${lbl}</span><b>${node.t}</b>${node.d ? `<br>${node.d}` : ""}</div>`;
+    if (i) g = `<div class="fl-arrow">→</div>` + g;
+    else if (e.incoming) g = `<div class="node incoming"><span class="lbl">comes from</span>${e.incoming.map(c =>
+      `<button class="chip" type="button" data-go="${c.from}">${c.from}</button> ${c.what}`).join("<br>")}</div><div class="fl-arrow">⇢</div>` + g;
+    groups.push(g);
+  });
+  if (e.branches) {
+    groups[groups.length - 1] += `<div class="fl-arrow">→</div><div class="branches">${e.branches.map(r => `<div class="branch"><span class="when">${r.when}</span>${
+      r.go ? `<button class="chip" type="button" data-go="${r.go}">${r.go} · ${STEPS[r.go].name}</button>` : `<span class="end">${r.txt}</span>`
+    }${r.note ? ` <small>${r.note}</small>` : ""}</div>`).join("")}</div>`;
+  }
+  return `<div class="flow">${groups.map(g => `<div class="group">${g}</div>`).join("")}</div>`;
+}
+
+function openStep(id, scroll = true) {
+  const e = STEPS[id];
+  if (!e) return;
+  buttons.forEach(b => b.setAttribute("aria-pressed", b.dataset.id === id ? "true" : "false"));
+
+  const fields = e.fields
+    ? `<dl class="fields">${Object.entries(e.fields).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : "";
+
+  panel.innerHTML = `
+    <div class="panel-top">
+      <h2>${id} · ${e.name}<small>${e.who}</small></h2>
+      <div class="actions">
+        <button class="copy-all" type="button" title="Copies the whole step as text: summary, flow, rules, status and sources">${COPY_ICON} Copy step</button>
+        <button class="close" type="button">Close ✕</button>
+      </div>
+    </div>
+    <p class="summary">${e.summary}</p>
+    <div class="block"><h3>How it works inside</h3></div>
+    ${flowHTML(e)}
+    <div class="flow-legend"><span>▢ step</span><span>┆ dashed: a person is involved</span><span>◫ double border: decision</span><span>◯ grey: in / out</span><span>⇢ comes from another step</span></div>
+    ${fields}
+    <div class="block"><h3>Status today</h3><div class="status">${e.status}</div></div>
+    <div class="block sources"><h3>Where it is written</h3>${e.sources.map(([href, txt]) => `<a href="${href}">${txt}</a>`).join(" · ")}</div>`;
+  panel.hidden = false;
+  veil.hidden = false;
+  document.body.classList.add("locked");
+  panel.scrollTop = 0;
+
+  panel.querySelector(".close").onclick = closePanel;
+  panel.querySelector(".copy-all").onclick = () => copy(stepText(id, true), `${id} · ${e.name} (full)`);
+  panel.querySelectorAll("[data-go]").forEach(c => c.onclick = () => openStep(c.dataset.go));
+  history.replaceState(null, "", "#" + id);
+  highlight(id);
+  panel.querySelector(".close").focus({ preventScroll: true });
+}
+
+function closePanel() {
+  panel.hidden = true;
+  veil.hidden = true;
+  document.body.classList.remove("locked");
+  const pressed = document.querySelector('.step[aria-pressed="true"]');
+  if (pressed) pressed.focus({ preventScroll: true });
+  buttons.forEach(b => b.setAttribute("aria-pressed", "false"));
+  history.replaceState(null, "", location.pathname);
+  highlight(null);
+}
+
+buttons.forEach(b => b.addEventListener("click", () =>
+  b.getAttribute("aria-pressed") === "true" ? closePanel() : openStep(b.dataset.id)));
+addEventListener("keydown", ev => { if (ev.key === "Escape" && !panel.hidden) closePanel(); });
+
+/* ---------- drawn connections ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const map = document.getElementById("map");
+const wires = document.getElementById("wires");
+const stepEl = id => document.querySelector(`.step[data-id="${id}"]`);
+
+function point(id, side, frac) {
+  const m = map.getBoundingClientRect(), r = stepEl(id).getBoundingClientRect();
+  return { x: r.left - m.left + r.width * frac, y: (side === "bottom" ? r.bottom : r.top) - m.top };
+}
+function bezier(p, q, t) {
+  const my = (p.y + q.y) / 2, u = 1 - t, c1 = { x: p.x, y: my }, c2 = { x: q.x, y: my };
+  return {
+    x: u*u*u*p.x + 3*u*u*t*c1.x + 3*u*t*t*c2.x + t*t*t*q.x,
+    y: u*u*u*p.y + 3*u*u*t*c1.y + 3*u*t*t*c2.y + t*t*t*q.y
+  };
+}
+
+const LINKS = [
+  { from: ["A4", "bottom", .35], to: ["B3", "top", .5],    type: "feeds",   n: 1, t: .5 },
+  { from: ["A1", "bottom", .35], to: ["B4", "top", .3],    type: "feeds",   n: 2, t: .25 },
+  { from: ["B7", "top", .5],     to: ["A4", "bottom", .75], type: "returns", n: 3, t: .5 },
+  { from: ["B6.1", "top", .85],  to: ["A1", "bottom", .75], type: "returns", n: 4, detour: true },
+  { from: ["B6", "bottom", .5],  to: ["B6.1", "top", .5],   type: "internal" }
+];
+
+let selected = null;
+
+function draw() {
+  wires.innerHTML = `<defs><marker id="tip" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>`;
+  for (const l of LINKS) {
+    const p = point(...l.from), q = point(...l.to);
+    let d, badge;
+    if (l.detour) {
+      // B6.1 sits below track B: goes up through the gap between B6 and B7 and crosses over to A1
+      const m = map.getBoundingClientRect(), b6 = stepEl("B6").getBoundingClientRect();
+      const x = b6.right - m.left + 14, yV = point("A1", "bottom", .75).y + 40;
+      d = `M${p.x},${p.y} L${p.x},${p.y - 18} L${x},${p.y - 18} L${x},${yV + 40} C${x},${yV} ${q.x},${yV + 30} ${q.x},${q.y}`;
+      badge = { x: (x + q.x) / 2, y: yV + 18 };
+    } else {
+      const my = (p.y + q.y) / 2;
+      d = `M${p.x},${p.y} C${p.x},${my} ${q.x},${my} ${q.x},${q.y}`;
+      if (l.n) badge = bezier(p, q, l.t);
+    }
+    const ends = `${l.from[0]} ${l.to[0]}`;
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("d", d); path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#111"); path.setAttribute("stroke-width", "1.5");
+    path.setAttribute("marker-end", "url(#tip)"); path.dataset.ends = ends;
+    if (l.type === "returns") path.setAttribute("stroke-dasharray", "6 5");
+    wires.appendChild(path);
+    if (badge) {
+      const g = document.createElementNS(NS, "g");
+      g.dataset.ends = ends;
+      g.innerHTML = `<circle cx="${badge.x}" cy="${badge.y}" r="11" fill="#fff" stroke="#111" stroke-width="1.5"/><text x="${badge.x}" y="${badge.y + 4}" text-anchor="middle" font-size="12" font-weight="700" font-family="system-ui, sans-serif">${l.n}</text>`;
+      wires.appendChild(g);
+    }
+  }
+  highlight(selected);
+}
+
+// with a step open, only its connections stay strong
+function highlight(id) {
+  selected = id;
+  wires.querySelectorAll("[data-ends]").forEach(el =>
+    el.classList.toggle("dimmed", !!id && !el.dataset.ends.split(" ").includes(id)));
+}
+
+draw();
+addEventListener("resize", draw);
+document.fonts && document.fonts.ready.then(draw);
+
+// opens directly from the URL, e.g. flow.html#B3
+const initial = decodeURIComponent(location.hash.slice(1));
+if (STEPS[initial]) openStep(initial, false);
+</script>
+
+</body>
+</html>

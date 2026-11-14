@@ -1,69 +1,69 @@
-# How It Works · como a automação funciona
+# How It Works · how the automation works
 
-O mapa de referência do processo. Quando falamos de uma etapa ("isso é B3", "isso é trilha A"), é deste mapa que estamos falando. O detalhe de cada etapa da produção (entra, sai, critério) está em [`fluxo-producao.md`](fluxo-producao.md).
+The reference map of the process. When we talk about a step ("this is B3", "this is track A"), this is the map we mean. The detail of each production step (input, output, criterion) is in [`production-flow.md`](production-flow.md).
 
-**Versão visual:** [`fluxo.html`](fluxo.html), que abre no navegador e tem as etapas clicáveis.
+**Visual version:** [`flow.html`](flow.html), which opens in the browser and has clickable steps.
 
 ---
 
-## Duas trilhas, a mesma importância
+## Two tracks, the same importance
 
-O processo não é uma fila única. São duas trilhas que rodam juntas:
+The process is not a single queue. There are two tracks that run together:
 
-- **Trilha A · Preparação do terreno:** contínua, independente de pedido. Deixa sistema, mídia e regras prontos.
-- **Trilha B · Produção:** roda a cada pedido, apoiada na trilha A.
+- **Track A · Groundwork:** continuous, independent of requests. Gets the system, media and rules ready.
+- **Track B · Production:** runs for each request, supported by track A.
 
-### Trilha A · Preparação do terreno
+### Track A · Groundwork
 
-| código | etapa | quem | o que é |
+| code | step | who | what it is |
 |---|---|---|---|
-| A1 | Sistema e estilo | você + Claude | ficha do projeto, design system, componentes, regras e aprendizados (da marca e gerais, alimentados pelas revisões). Passo a passo para marca nova: [`guia-kit-projeto.md`](guia-kit-projeto.md) |
-| A2 | Decupagem | você + Claude | organizar e catalogar o material bruto; processo à parte, entrega um ZIP |
-| A3 | Importação | Claude | do ZIP da decupagem para o banco de mídia e o catálogo: área **aberta** (equipe toda) ou **restrita** por projeto, com código no lugar do nome |
-| A4 | Curadoria | você + Claude | destaques, contraste, histórico: o banco fica pronto para escolha. Os usos de cada imagem vêm do log `midia/usos.csv` |
+| A1 | System and style | you + Claude | project sheet, design system, components, rules and learnings (the brand's and general ones, fed by the reviews). Step by step for a new brand: [`project-kit-guide.md`](project-kit-guide.md) |
+| A2 | Footage logging | you + Claude | organize and catalog the raw material; a separate process, delivers a ZIP |
+| A3 | Import | Claude | from the footage log ZIP to the media bank and the catalog: **open** area (whole team) or **restricted** per project, with a code instead of the name |
+| A4 | Curation | you + Claude | highlights, contrast, history: the bank gets ready for choosing. The uses of each image come from the log `media/uses.csv` |
 
-### Trilha B · Produção
+### Track B · Production
 
-| código | etapa | quem | o que é |
+| code | step | who | what it is |
 |---|---|---|---|
-| B1 | Pedido | cliente ou você | o pedido chega da **fonte configurada no projeto** (Notion, outra ferramenta, planilha, documento ou texto escrito pela IA e aprovado por você) com o texto **já separado por slide**, e o Claude o converte no **pedido padrão** (projeto, tema, pasta de entrega e a tabela "Sequência / Texto da Arte"). No processo original, a fonte é uma tarefa no Notion e o projeto vem da relação `Project` |
-| B2 | Estruturação | Claude | o texto vira a estrutura do carrossel (capa, conteúdos, final, posição, destaque, viúvas) e é distribuído em slides, com **pelo menos um spread** (não todos). Organiza, **não reescreve** |
-| B3 | Escolha das fotos | Claude | 1 principal + 2 alternativas por slide, nesta ordem: **sentido** (segue o "Perfil e imagem" da ficha do projeto; a foto conta a mesma etapa do texto, a capa mostra o tema direto, as fotos seguem um arco) → inegociáveis (rosto, contraste mínimo, emenda) → **coerência com a direção fotográfica** do projeto → contraste medido → formato e usos. Falta de foto certa vira **pauta**, não foto que "só passa". Consulta catálogo + log de usos e prefere as menos usadas e não usadas recentemente no projeto. Fontes, nesta ordem: **fotos reais do cliente** (decupagem) → **legado** (`legado:figma`) → **Pexels** (navegador) → **Freepik** (conector Magnific); as externas só quando o slide tem menos de 2 opções boas no banco. Externa entra na mesa como **prévia**; só é baixada depois da aprovação no B6 e entra no `midia/` com origem e licença |
-| B4 | Montagem | Claude | a **mesa** no Figma: uma página única **"Mesa de trabalho"** por projeto, com uma seção por conteúdo em andamento; com os componentes `Social/*`, em três faixas alinhadas por slide: carrossel em cima, **tarja de decisão** (salmão = decisão sua, branca = nada pendente) e as sugestões de foto embaixo |
-| B5 | Checagem | Claude | contraste medido + screenshot (rosto, emenda, texto cortado); exceções com nível, motivo e sugestão |
-| B6 | Ajuste e aprovação | você + cliente | revisão humana da mesa. Quem revisa **olha, não lê**: o que pede decisão aparece na imagem ou na tarja |
-| B6.1 | Ciclo de revisão | Claude | cada ponto do feedback vira **critério escrito** (da marca ou geral) **antes** de refazer; a mesa ganha v2, v3… e a anterior fica embaixo, marcada como substituída |
-| B7 | Entrega | você + Claude | PNGs **1080 × 1440** (formato oficial de todos os projetos) nomeados `01.png`, `02.png`… na **pasta de entrega do pedido** (padrão: `projetos/<slug>/entregas/<tema>/`; no Notion, a pasta do `Link Location`), status na fonte do pedido quando houver e registro (uma linha em `midia/usos.csv` por foto usada, histórico, tempos). Só com confirmação |
+| B1 | Request | client or you | the request arrives from the **source configured in the project** (Notion, another tool, spreadsheet, document or text written by the AI and approved by you) with the text **already split per slide**, and Claude converts it into the **standard request** (project, topic, delivery folder and the "Sequence / Art Text" table). In the original process, the source is a task in Notion and the project comes from the `Project` relation |
+| B2 | Structuring | Claude | the text becomes the carousel structure (cover, contents, final, position, highlight, widows) and is distributed into slides, with **at least one spread** (not all). It organizes, **does not rewrite** |
+| B3 | Photo selection | Claude | 1 main + 2 alternatives per slide, in this order: **meaning** (follows the project sheet's "Profile and image"; the photo tells the same stage as the text, the cover shows the topic directly, the photos follow an arc) → non-negotiables (face, minimum contrast, seam) → **coherence with the project's photo direction** → measured contrast → format and uses. Lack of the right photo becomes a **shot-list item**, not a photo that "just passes". It consults the catalog + usage log and prefers the least used ones and those not used recently in the project. Sources, in this order: **the client's real photos** (footage log) → **legacy** (`legacy:figma`) → **Pexels** (browser) → **Freepik** (Magnific connector); the external ones only when the slide has fewer than 2 good options in the bank. An external photo goes onto the review board as a **preview**; it is only downloaded after approval in B6 and goes into `media/` with origin and license |
+| B4 | Assembly | Claude | the **review board** in Figma: a single **"Review boards"** page per project, with one section per piece of content in progress; with the `Social/*` components, in three bands aligned per slide: carousel on top, **decision strip** (salmon = your decision, white = nothing pending) and the photo suggestions below |
+| B5 | Check | Claude | measured contrast + screenshot (face, seam, cut-off text); exceptions with level, reason and suggestion |
+| B6 | Adjustment and approval | you + client | human review of the review board. Whoever reviews **looks, doesn't read**: what needs a decision appears in the image or on the strip |
+| B6.1 | Review cycle | Claude | each point of the feedback becomes a **written criterion** (the brand's or general) **before** redoing; the review board gets v2, v3… and the previous one stays below, marked as replaced |
+| B7 | Delivery | you + Claude | **1080 × 1440** PNGs (official format for all projects) named `01.png`, `02.png`… in the **request's delivery folder** (default: `projects/<slug>/deliveries/<topic>/`; in Notion, the `Link Location` folder), status in the request's source when there is one, and record (one row in `media/uses.csv` per photo used, history, timings). Only with confirmation |
 
-## Como as trilhas se ligam
+## How the tracks connect
 
-- **B3 puxa de A** o catálogo e as fotos.
-- **B4 puxa de A** os componentes do design system.
-- **B7 devolve para A4** os usos das fotos, o histórico do carrossel e os tempos. Isso fecha o ciclo: cada entrega melhora a próxima.
-- **B6.1 devolve para A1** os critérios aprendidos na revisão (`aprendizados.md`). Cada revisão deixa a próxima mesa melhor desde a primeira versão.
+- **B3 pulls from A** the catalog and the photos.
+- **B4 pulls from A** the design system components.
+- **B7 returns to A4** the uses of the photos, the carousel history and the timings. This closes the loop: each delivery improves the next one.
+- **B6.1 returns to A1** the criteria learned in the review (`learnings.md`). Each review makes the next review board better from the first version.
 
-## O que já vem pronto neste repositório
+## What already comes ready in this repository
 
-- **Modelo de projeto (A1):** `projetos/_modelo/` (ficha com Tom de voz e Perfil e imagem, aprendizados, direção fotográfica). Passo a passo para montar o kit de uma marca: `docs/guia-kit-projeto.md`.
-- **Banco de mídia (A3, A4):** estrutura em `midia/` (área aberta e restrita, catálogo, log de usos).
-- **Pedido padrão:** o formato neutro que o B2 lê, descrito em `docs/fluxo-producao.md` ("Pedido padrão"), com exemplo em `scripts/exemplos/pedido-padrao-exemplo.md`.
-- **Já é script:** importação (A3, `importar_decupagem.py`), catálogo (A4, `indexar_midia.py`), estruturação do pedido (B2, `estruturar_pedido.py`, que lê o pedido padrão ou uma tarefa do Notion), contraste (B3/B5, `medir_contraste.py`) e coerência de cor (B3, `medir_coerencia.py`).
-- **Fotos externas (B3):** Pexels pelo navegador e Freepik pelo conector Magnific, só com prévia até a aprovação.
-- **Ainda não é script:** montagem da mesa (B4; o Claude monta no Figma seguindo `fluxo-producao.md`) e registro do B7.
+- **Project template (A1):** `projects/_template/` (sheet with Tone of voice and Profile and image, learnings, photo direction). Step by step to put together a brand's kit: `docs/project-kit-guide.md`.
+- **Media bank (A3, A4):** structure in `media/` (open and restricted area, catalog, usage log).
+- **Standard request:** the neutral format B2 reads, described in `docs/production-flow.md` ("Standard request"), with an example in `scripts/examples/standard-request-example.md`.
+- **Already a script:** import (A3, `import_footage_log.py`), catalog (A4, `index_media.py`), request structuring (B2, `structure_request.py`, which reads the standard request or a Notion task), contrast (B3/B5, `measure_contrast.py`) and color coherence (B3, `measure_coherence.py`).
+- **External photos (B3):** Pexels through the browser and Freepik through the Magnific connector, only as a preview until approval.
+- **Not a script yet:** review board assembly (B4; Claude builds it in Figma following `production-flow.md`) and the B7 record.
 
-## Princípios que atravessam tudo
+## Principles that run through everything
 
-- **Regra não é filtro:** só o inegociável bloqueia; o resto vira exceção com motivo para decisão humana.
-- **Nada sai sem uma pessoa:** publicar, entregar e alterar o Notion (ou outra fonte de pedidos) só com confirmação.
-- **O texto do pedido não é reescrito:** o B2 organiza. Se o texto foi escrito pela IA a partir de um tema, isso acontece **antes** do B1 e ele só vira pedido depois que você aprova.
-- **Tempo se mede:** toda mesa registra seus marcos em `projetos/<slug>/producao/tempos.csv`.
-- **Feedback vira aprendizado:** vai para `projetos/<slug>/aprendizados.md` ou `docs/aprendizados-carrossel.md`.
+- **A rule is not a filter:** only the non-negotiable blocks; the rest becomes an exception with a reason for a human decision.
+- **Nothing goes out without a person:** publishing, delivering and changing Notion (or another source of requests) only with confirmation.
+- **The request text is not rewritten:** B2 organizes. If the text was written by the AI from a topic, that happens **before** B1 and it only becomes a request after you approve it.
+- **Time is measured:** every review board records its milestones in `projects/<slug>/production/timings.csv`.
+- **Feedback becomes learning:** it goes to `projects/<slug>/learnings.md` or `docs/carousel-learnings.md`.
 
-## Versão visual
+## Visual version
 
-[`fluxo.html`](fluxo.html) desenha este mapa e o [`fluxo-producao.md`](fluxo-producao.md): as duas trilhas, as conexões e, ao clicar numa etapa, como ela funciona por dentro. Abre direto no navegador; `fluxo.html#B3` já abre o B3. Os textos são a fonte: se o visual divergir, eles valem.
+[`flow.html`](flow.html) draws this map and [`production-flow.md`](production-flow.md): the two tracks, the connections and, when you click a step, how it works inside. It opens directly in the browser; `flow.html#B3` opens B3 directly. The texts are the source: if the visual diverges, they win.
 
-**Atualização em lote.** O visual não é refeito a cada mudança. Quem mudar este mapa ou o `fluxo-producao.md` anota a mudança na lista abaixo. Quando a lista tiver algo, o Claude pergunta se já pode atualizar o visual ou se espera mais mudanças. Ao atualizar, a lista é esvaziada e a data muda.
+**Batch update.** The visual is not redone at each change. Whoever changes this map or `production-flow.md` notes the change in the list below. When the list has something, Claude asks whether it can update the visual now or wait for more changes. When updating, the list is emptied and the date changes.
 
-- **Visual atualizado em:** 2026-11-14
-- **Pendente no visual:** nada.
+- **Visual updated on:** 2026-11-14
+- **Pending in the visual:** nothing.

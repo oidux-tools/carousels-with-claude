@@ -1,4 +1,4 @@
-# Sistema e Google Drive
+# System and Google Drive
 desktop.ini
 Thumbs.db
 .DS_Store
@@ -9,24 +9,24 @@ Thumbs.db
 __pycache__/
 *.pyc
 
-# Banco de mídia: versiona estrutura e catálogos, nunca os arquivos de mídia
-/midia/**
-!/midia/**/
-!/midia/**/.gitkeep
-!/midia/README.md
-!/midia/catalogo.csv
-!/midia/projetos.csv
-!/midia/usos.csv
+# Media bank: versions structure and catalogs, never the media files
+/media/**
+!/media/**/
+!/media/**/.gitkeep
+!/media/README.md
+!/media/catalog.csv
+!/media/projects.csv
+!/media/uses.csv
 
-# Projetos: versiona fichas e textos; guias e kits (PDF, AI, fontes…) ficam só no Drive
-/projetos/*/guias/**
-/projetos/*/kit/**
-!/projetos/*/guias/**/
-!/projetos/*/kit/**/
-!/projetos/**/.gitkeep
-!/projetos/**/*.md
+# Projects: versions sheets and texts; guides and kits (PDF, AI, fonts…) stay only on the Drive
+/projects/*/guides/**
+/projects/*/kit/**
+!/projects/*/guides/**/
+!/projects/*/kit/**/
+!/projects/**/.gitkeep
+!/projects/**/*.md
 
-# Entregas (PNGs finais) são mídia: ficam fora do Git, como o banco
-/projetos/*/entregas/**
-!/projetos/*/entregas/**/
-!/projetos/*/entregas/**/.gitkeep
+# Deliveries (final PNGs) are media: they stay out of Git, like the bank
+/projects/*/deliveries/**
+!/projects/*/deliveries/**/
+!/projects/*/deliveries/**/.gitkeep
